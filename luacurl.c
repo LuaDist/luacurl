@@ -14,8 +14,16 @@
 #include <stdlib.h>
 #include <curl/curl.h>
 #include <curl/easy.h>
-#include <curl/curlver.h>
+
+#ifndef LIBCURL_VERSION
+  #include <curl/curlver.h>
+#endif
+
 #include <lauxlib.h>
+
+#if !defined(LUA_VERSION_NUM) || (LUA_VERSION_NUM <= 500)
+#define luaL_checkstring luaL_check_string 
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,6 +35,10 @@ extern "C" {
 
 #define LUACURL_LIBNAME	"curl"
 #define CURLHANDLE  "curlT"
+
+#define MAKE_VERSION_NUM(x,y,z) (z + (y << 8) + (x << 16))
+#define CURL_NEWER(x,y,z) (MAKE_VERSION_NUM(x,y,z) <= LIBCURL_VERSION_NUM)
+#define CURL_OLDER(x,y,z) (MAKE_VERSION_NUM(x,y,z) > LIBCURL_VERSION_NUM)
 
 /* Fast set table macro */
 #define LUA_SET_TABLE(context, key_type, key, value_type, value) \
@@ -41,7 +53,7 @@ extern "C" {
 /* wrap the other curl options not included above */
 #define C_OPT_SPECIAL(n)
 
-/* describes all currently supported curl options available to curl 7.14.0 */
+/* describes all currently supported curl options available to curl 7.15.2 */
 #define ALL_CURL_OPT \
 	C_OPT_SPECIAL(WRITEDATA) \
 	C_OPT(URL, string) \
@@ -157,9 +169,39 @@ extern "C" {
 	C_OPT_SL(SOURCE_QUOTE) \
 	C_OPT(FTP_ACCOUNT, string)
 
+#if CURL_OLDER(7,12,1)
+  #define CURLOPT_SOURCE_PREQUOTE      -MAKE_VERSION_NUM(1,12,7)+0
+  #define CURLOPT_SOURCE_POSTQUOTE     -MAKE_VERSION_NUM(1,12,7)+1
+  #define CURLOPT_SOURCE_USERPWD       -MAKE_VERSION_NUM(1,12,7)+2
+#endif
+
+#if CURL_OLDER(7,12,2)
+  #define CURLOPT_FTPSSLAUTH           -MAKE_VERSION_NUM(2,12,7)+0
+#endif
+ 
+#if CURL_OLDER(7,12,3)
+  #define CURLOPT_TCP_NODELAY          -MAKE_VERSION_NUM(3,12,7)+0
+  #define CURLOPT_IOCTLFUNCTION        -MAKE_VERSION_NUM(3,12,7)+1
+  #define CURLOPT_IOCTLDATA            -MAKE_VERSION_NUM(3,12,7)+2
+  #define CURLE_SSL_ENGINE_INITFAILED  -MAKE_VERSION_NUM(3,12,7)+3
+  #define CURLE_IOCTLFUNCTION          -MAKE_VERSION_NUM(3,12,7)+4
+  #define CURLE_IOCTLDATA              -MAKE_VERSION_NUM(3,12,7)+5
+#endif
+
+#if CURL_OLDER(7,13,0)
+  #define CURLOPT_SOURCE_URL           -MAKE_VERSION_NUM(0,13,7)+0
+  #define CURLOPT_SOURCE_QUOTE         -MAKE_VERSION_NUM(0,13,7)+1
+  #define CURLOPT_FTP_ACCOUNT          -MAKE_VERSION_NUM(0,13,7)+2
+  #define CURLE_INTERFACE_FAILED       -MAKE_VERSION_NUM(0,13,7)+3
+  #define CURLE_SEND_FAIL_REWIND       -MAKE_VERSION_NUM(0,13,7)+4
+#endif
+
+#if CURL_OLDER(7,13,1)
+  #define CURLE_LOGIN_DENIED           -MAKE_VERSION_NUM(1,13,7)+0
+#endif
+
 /* register static the names of options of type curl_slist */
 ALL_CURL_OPT
-
 
 /* not supported options for any reason
 	CURLOPT_STDERR (TODO)
@@ -180,7 +222,11 @@ union luaValueT
 	curl_read_callback rcb;
 	curl_write_callback wcb;
 	curl_progress_callback pcb;
+
+#if CURL_NEWER(7,12,3)
 	curl_ioctl_callback icb;
+#endif
+
 	int nval;
 	char* sval;
 	void* ptr;
@@ -265,6 +311,7 @@ static size_t headerCallback(void *ptr, size_t size, size_t nmemb, void *stream)
 	return (size_t)lua_tonumber(c->L, -1);
 }
 
+#if CURL_NEWER(7,12,3)
 curlioerr ioctlCallback(CURL *handle, int cmd, void *clientp)
 {
 	curlT* c=(curlT*)clientp;
@@ -274,6 +321,7 @@ curlioerr ioctlCallback(CURL *handle, int cmd, void *clientp)
 	lua_call(c->L, 2, 1);
 	return (curlioerr)lua_tonumber(c->L, -1);
 }
+#endif
 
 /* Initializes CURL connection */
 static int lcurl_easy_init(lua_State* L)
@@ -330,6 +378,100 @@ static curlT* tocurl (lua_State *L, int cindex)
 	return c;
 }
 
+/* Request internal information from the curl session */
+static int lcurl_easy_getinfo(lua_State* L)
+{
+	curlT* c=tocurl(L, 1);
+	CURLINFO nInfo;
+	CURLcode code=-1;
+	luaL_checktype(L, 2, LUA_TNUMBER);   /* accept info code number only */
+	nInfo=lua_tonumber(L, 2);
+	if (nInfo>CURLINFO_SLIST)
+	{
+		/* string list */
+		struct curl_slist *slist=0;
+		if (CURLE_OK == (code=curl_easy_getinfo(c, nInfo, &slist)))
+		{
+			if (slist)
+			{
+				int i;
+				lua_newtable(L);
+				for (i=1; slist; i++, slist=slist->next)
+				{
+					lua_pushnumber(L, i);
+					lua_pushstring(L, slist->data);
+					lua_settable(L, -3);
+				}
+				curl_slist_free_all(slist);
+			} else
+			{
+				lua_pushnil(L);
+			}
+			return 1;
+		} else
+		{
+			/* curl_easy_getinfo returns error */
+		}
+	} else
+	if (nInfo>CURLINFO_DOUBLE)
+	{
+		/* double */
+		double value;
+		if (CURLE_OK == (code=curl_easy_getinfo(c, nInfo, &value)))
+		{
+			lua_pushnumber(L, value);
+			return 1;
+		} else
+		{
+			/* curl_easy_getinfo returns error */
+		}
+	} else
+	if (nInfo>CURLINFO_LONG)
+	{
+		/* long */
+		long value;
+		if (CURLE_OK == (code=curl_easy_getinfo(c, nInfo, &value)))
+		{
+			lua_pushinteger(L, (lua_Integer)value);
+			return 1;
+		} else
+		{
+			/* curl_easy_getinfo returns error */
+		}
+	} else
+	if (nInfo>CURLINFO_STRING)
+	{
+		/* string */
+		char* value;
+		if (CURLE_OK == (code=curl_easy_getinfo(c, nInfo, &value)))
+		{
+			lua_pushstring(L, value);
+			return 1;
+		} else
+		{
+			/* curl_easy_getinfo returns error */
+		}
+	}
+/* on error */
+	/* return nil, error message, error code */
+	lua_pushnil(L);
+	if (code>CURLE_OK)
+	{
+		#if CURL_NEWER(7,11,2)
+			lua_pushstring(L, curl_easy_strerror(code));
+		#else
+			lua_pushfstring(L, "Curl error: #%d", (code));
+		#endif
+		lua_pushnumber(L, code);
+		return 3;
+	}
+	else
+	{
+		lua_pushfstring(L, "Invalid CURLINFO number: %d", nInfo);
+		return 2;
+	}
+}
+
 /* convert argument n to string allowing nil values */
 static union luaValueT get_string(lua_State* L, int n)
 {
@@ -382,7 +524,7 @@ static union luaValueT get_slist(lua_State* L, int n, const char** key)
 	free_slist(L, key);
 
 	/* check if all parameters are strings */
-	for (i=n; i<lua_gettop(L); i++) luaL_check_string(L, i);
+	for (i=n; i<lua_gettop(L); i++) luaL_checkstring(L, i);
 	for (i=n; i<lua_gettop(L); i++)
 	{
 		slist = curl_slist_append(slist, lua_tostring(L, i));
@@ -420,11 +562,14 @@ static int lcurl_easy_setopt(lua_State* L)
 		case CURLOPT_HEADERFUNCTION:
 		case CURLOPT_IOCTLFUNCTION:
 			luaL_checktype(L, 3, LUA_TFUNCTION); /* callback options require Lua function value */
+
 		case CURLOPT_READDATA:
 		case CURLOPT_WRITEDATA:
 		case CURLOPT_PROGRESSDATA:
 		case CURLOPT_HEADERDATA:
+#if CURL_NEWER(7,12,3)
 		case CURLOPT_IOCTLDATA:
+#endif
 			switch (lua_type(L, 3))             /* handle table, userdata and funtion callback params specially */
 			{
 				case LUA_TTABLE:
@@ -439,30 +584,31 @@ static int lcurl_easy_setopt(lua_State* L)
 					{
 						luaL_unref(L, LUA_REGISTRYINDEX, c->freaderRef); /* unregister previous reference to reader if any */
 						c->freaderRef=ref;                               /* keep the reader function reference in self */
-						v.rcb=readerCallback;                            /* redirect the option value to readerCallback */
+						v.rcb=(curl_read_callback)readerCallback;        /* redirect the option value to readerCallback */
 						if (CURLE_OK != (code=curl_easy_setopt(c->curl, CURLOPT_READDATA, c))) goto on_error;
 					}
 					else if (curlOpt == CURLOPT_WRITEFUNCTION)
 					{
 						luaL_unref(L, LUA_REGISTRYINDEX, c->fwriterRef);
 						c->fwriterRef=ref;
-						v.wcb=writerCallback;
+						v.wcb=(curl_write_callback)writerCallback;
 						if (CURLE_OK != (code=curl_easy_setopt(c->curl, CURLOPT_WRITEDATA, c))) goto on_error;
 					}
 					else if (curlOpt == CURLOPT_PROGRESSFUNCTION)
 					{
 						luaL_unref(L, LUA_REGISTRYINDEX, c->fprogressRef);
 						c->fprogressRef=ref;
-						v.pcb=progressCallback;
+						v.pcb=(curl_progress_callback)progressCallback;
 						if (CURLE_OK != (code=curl_easy_setopt(c->curl, CURLOPT_PROGRESSDATA, c))) goto on_error;
 					}
 					else if (curlOpt == CURLOPT_HEADERFUNCTION)
 					{
 						luaL_unref(L, LUA_REGISTRYINDEX, c->fheaderRef);
 						c->fheaderRef=ref;
-						v.wcb=headerCallback;
+						v.wcb=(curl_write_callback)headerCallback;
 						if (CURLE_OK != (code=curl_easy_setopt(c->curl, CURLOPT_HEADERDATA, c))) goto on_error;
 					}
+#if CURL_NEWER(7,12,3)
 					else if (curlOpt == CURLOPT_IOCTLFUNCTION)
 					{
 						luaL_unref(L, LUA_REGISTRYINDEX, c->fioctlRef);
@@ -470,9 +616,10 @@ static int lcurl_easy_setopt(lua_State* L)
 						v.icb=ioctlCallback;
 						if (CURLE_OK != (code=curl_easy_setopt(c->curl, CURLOPT_IOCTLDATA, c))) goto on_error;
 					}
+#endif
 					else
 					{
-						/* When the option code is any of CURLOPT_???DATA and the argument is table, 
+						/* When the option code is any of CURLOPT_xxxDATA and the argument is table, 
 						/* userdata or function set the curl option value to the lua object reference */
 						v.nval=ref;
 					}
@@ -504,19 +651,23 @@ ALL_CURL_OPT
 	switch (lua_type(L, 3))
 	{
 		case LUA_TFUNCTION:                        /* allow function argument only for the special option codes */
-			if (curlOpt == CURLOPT_READFUNCTION || 
-				curlOpt == CURLOPT_WRITEFUNCTION || 
-				curlOpt == CURLOPT_PROGRESSFUNCTION || 
-				curlOpt == CURLOPT_HEADERFUNCTION || 
-				curlOpt == CURLOPT_IOCTLFUNCTION)
+			if (curlOpt == CURLOPT_READFUNCTION
+				|| curlOpt == CURLOPT_WRITEFUNCTION
+				|| curlOpt == CURLOPT_PROGRESSFUNCTION
+				|| curlOpt == CURLOPT_HEADERFUNCTION
+				|| curlOpt == CURLOPT_IOCTLFUNCTION
+				)
 				break;
 		case LUA_TTABLE:                           /* allow table or userdata only for the callback parameter option */
 		case LUA_TUSERDATA:
-			if (curlOpt != CURLOPT_READDATA && 
-				curlOpt != CURLOPT_WRITEDATA && 
-				curlOpt != CURLOPT_PROGRESSDATA && 
-				curlOpt != CURLOPT_HEADERDATA && 
-				curlOpt != CURLOPT_IOCTLDATA)
+			if (curlOpt != CURLOPT_READDATA
+				&& curlOpt != CURLOPT_WRITEDATA
+				&& curlOpt != CURLOPT_PROGRESSDATA
+				&& curlOpt != CURLOPT_HEADERDATA
+#if CURL_NEWER(7,12,3)
+				&& curlOpt != CURLOPT_IOCTLDATA
+#endif
+				)
 				luaL_error(L, "argument #2 type %s is not compatible with this option", lua_typename(L, 3));
 			break;
 	}
@@ -552,6 +703,7 @@ ALL_CURL_OPT
 			c->hud=v;
 			v.ptr=c;
 			break;
+#if CURL_NEWER(7,12,3)
 		case CURLOPT_IOCTLDATA:
 			if (c->iudtype == LUA_TFUNCTION || c->iudtype == LUA_TUSERDATA)
 				luaL_unref(L, LUA_REGISTRYINDEX, c->iud.nval);
@@ -559,6 +711,7 @@ ALL_CURL_OPT
 			c->iud=v;
 			v.ptr=c;
 			break;
+#endif
 	}
 
 	/* set easy the curl option with the processed value */
@@ -571,7 +724,11 @@ ALL_CURL_OPT
 on_error:
 	/* on fail return nil, error message, error code */
 	lua_pushnil(L);
+#if CURL_NEWER(7,11,2)
 	lua_pushstring(L, curl_easy_strerror(code));
+#else
+	lua_pushfstring(L, "Curl error: #%d", (code));
+#endif
 	lua_pushnumber(L, code);
 	return 3;
 }
@@ -590,7 +747,11 @@ static int lcurl_easy_perform(lua_State* L)
 	}
 	/* on fail return nil, error message, error code */
 	lua_pushnil(L);
+#if CURL_NEWER(7,11,2)
 	lua_pushstring(L, curl_easy_strerror(code));
+#else
+	lua_pushfstring(L, "Curl error: #%d", (code));
+#endif
 	lua_pushnumber(L, code);
 	return 3;
 }
@@ -647,6 +808,7 @@ static const struct luaL_reg luacurl_meths[] =
 	{"close", lcurl_easy_close},
 	{"setopt", lcurl_easy_setopt},
 	{"perform", lcurl_easy_perform},
+	{"getinfo", lcurl_easy_getinfo},
 	{"__gc", lcurl_gc},
 	{0, 0}
 };
@@ -672,10 +834,10 @@ static void createmeta (lua_State *L)
  */
 static void set_info (lua_State *L) 
 {
-	LUA_SET_TABLE(L, literal, "_COPYRIGHT", literal, "(C) 2003-2005 AVIQ Systems AG");
+	LUA_SET_TABLE(L, literal, "_COPYRIGHT", literal, "(C) 2003-2006 AVIQ Systems AG");
 	LUA_SET_TABLE(L, literal, "_DESCRIPTION", literal, "LuaCurl binds the CURL easy interface to Lua");
 	LUA_SET_TABLE(L, literal, "_NAME", literal, "luacurl");
-	LUA_SET_TABLE(L, literal, "_VERSION", literal, "1.0.0");
+	LUA_SET_TABLE(L, literal, "_VERSION", literal, "1.1.0");
 	LUA_SET_TABLE(L, literal, "_CURLVERSION", string, curl_version());
 	LUA_SET_TABLE(L, literal, "_SUPPORTED_CURLVERSION", literal, LIBCURL_VERSION);
 }
@@ -766,8 +928,11 @@ ALL_CURL_OPT
 
 static void setcurlvalues(lua_State* L)
 {
+#if CURL_NEWER(7,12,1)
 	LUA_SET_TABLE(L, literal, "READFUNC_ABORT", number, CURL_READFUNC_ABORT);
+#endif
 
+#if CURL_NEWER(7,12,3)
 	/* enum curlioerr */
 	LUA_SET_TABLE(L, literal, "IOE_OK", number, CURLIOE_OK);
 	LUA_SET_TABLE(L, literal, "IOE_UNKNOWNCMD", number, CURLIOE_UNKNOWNCMD);
@@ -776,6 +941,7 @@ static void setcurlvalues(lua_State* L)
 	/* enum curliocmd */
 	LUA_SET_TABLE(L, literal, "IOCMD_NOP", number, CURLIOCMD_NOP);
 	LUA_SET_TABLE(L, literal, "IOCMD_RESTARTREAD", number, CURLIOCMD_RESTARTREAD);
+#endif
 
 	/* enum curl_proxytype */
 	LUA_SET_TABLE(L, literal, "PROXY_HTTP", number, CURLPROXY_HTTP);
@@ -797,10 +963,12 @@ static void setcurlvalues(lua_State* L)
 	LUA_SET_TABLE(L, literal, "FTPSSL_CONTROL", number, CURLFTPSSL_CONTROL);
 	LUA_SET_TABLE(L, literal, "FTPSSL_ALL", number, CURLFTPSSL_ALL);
 
+#if CURL_NEWER(7,12,2)
 	/* enum curl_ftpauth */
 	LUA_SET_TABLE(L, literal, "FTPAUTH_DEFAULT", number, CURLFTPAUTH_DEFAULT);
 	LUA_SET_TABLE(L, literal, "FTPAUTH_SSL", number, CURLFTPAUTH_SSL);
 	LUA_SET_TABLE(L, literal, "FTPAUTH_TLS", number, CURLFTPAUTH_TLS);
+#endif
 
 	/* ip resolve options */
 	LUA_SET_TABLE(L, literal, "IPRESOLVE_WHATEVER", number, CURL_IPRESOLVE_WHATEVER);
@@ -857,7 +1025,10 @@ static void setcurlvalues(lua_State* L)
 	LUA_SET_TABLE(L, literal, "CURL_FORMADD_UNKNOWN_OPTION", number, CURL_FORMADD_UNKNOWN_OPTION);
 	LUA_SET_TABLE(L, literal, "CURL_FORMADD_INCOMPLETE", number, CURL_FORMADD_INCOMPLETE);
 	LUA_SET_TABLE(L, literal, "CURL_FORMADD_ILLEGAL_ARRAY", number, CURL_FORMADD_ILLEGAL_ARRAY);
+
+#if CURL_NEWER(7,12,1)
 	LUA_SET_TABLE(L, literal, "CURL_FORMADD_DISABLED", number, CURL_FORMADD_DISABLED);
+#endif
 
 	/* enum curl_closepolicy*/
 	LUA_SET_TABLE(L, literal, "CLOSEPOLICY_OLDEST", number, CURLCLOSEPOLICY_OLDEST);
@@ -865,7 +1036,42 @@ static void setcurlvalues(lua_State* L)
 	LUA_SET_TABLE(L, literal, "CLOSEPOLICY_LEAST_TRAFFIC", number, CURLCLOSEPOLICY_LEAST_TRAFFIC);
 	LUA_SET_TABLE(L, literal, "CLOSEPOLICY_SLOWEST", number, CURLCLOSEPOLICY_SLOWEST);
 	LUA_SET_TABLE(L, literal, "CLOSEPOLICY_CALLBACK", number, CURLCLOSEPOLICY_CALLBACK);
+}
 
+static void setcurlinfo(lua_State* L)
+{
+	LUA_SET_TABLE(L, literal, "INFO_NONE", number, CURLINFO_NONE);
+	LUA_SET_TABLE(L, literal, "INFO_EFFECTIVE_URL", number, CURLINFO_EFFECTIVE_URL);
+	LUA_SET_TABLE(L, literal, "INFO_RESPONSE_CODE", number, CURLINFO_RESPONSE_CODE);
+	LUA_SET_TABLE(L, literal, "INFO_TOTAL_TIME", number, CURLINFO_TOTAL_TIME);
+	LUA_SET_TABLE(L, literal, "INFO_NAMELOOKUP_TIME", number, CURLINFO_NAMELOOKUP_TIME);
+	LUA_SET_TABLE(L, literal, "INFO_CONNECT_TIME", number, CURLINFO_CONNECT_TIME);
+	LUA_SET_TABLE(L, literal, "INFO_PRETRANSFER_TIME", number, CURLINFO_PRETRANSFER_TIME);
+	LUA_SET_TABLE(L, literal, "INFO_SIZE_UPLOAD", number, CURLINFO_SIZE_UPLOAD);
+	LUA_SET_TABLE(L, literal, "INFO_SIZE_DOWNLOAD", number, CURLINFO_SIZE_DOWNLOAD);
+	LUA_SET_TABLE(L, literal, "INFO_SPEED_DOWNLOAD", number, CURLINFO_SPEED_DOWNLOAD);
+	LUA_SET_TABLE(L, literal, "INFO_SPEED_UPLOAD", number, CURLINFO_SPEED_UPLOAD);
+	LUA_SET_TABLE(L, literal, "INFO_HEADER_SIZE", number, CURLINFO_HEADER_SIZE);
+	LUA_SET_TABLE(L, literal, "INFO_REQUEST_SIZE", number, CURLINFO_REQUEST_SIZE);
+	LUA_SET_TABLE(L, literal, "INFO_SSL_VERIFYRESULT", number, CURLINFO_SSL_VERIFYRESULT);
+	LUA_SET_TABLE(L, literal, "INFO_FILETIME", number, CURLINFO_FILETIME);
+	LUA_SET_TABLE(L, literal, "INFO_CONTENT_LENGTH_DOWNLOAD", number, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
+	LUA_SET_TABLE(L, literal, "INFO_CONTENT_LENGTH_UPLOAD", number, CURLINFO_CONTENT_LENGTH_UPLOAD);
+	LUA_SET_TABLE(L, literal, "INFO_STARTTRANSFER_TIME", number, CURLINFO_STARTTRANSFER_TIME);
+	LUA_SET_TABLE(L, literal, "INFO_CONTENT_TYPE", number, CURLINFO_CONTENT_TYPE);
+	LUA_SET_TABLE(L, literal, "INFO_REDIRECT_TIME", number, CURLINFO_REDIRECT_TIME);
+	LUA_SET_TABLE(L, literal, "INFO_REDIRECT_COUNT", number, CURLINFO_REDIRECT_COUNT);
+	LUA_SET_TABLE(L, literal, "INFO_PRIVATE", number, CURLINFO_PRIVATE);
+	LUA_SET_TABLE(L, literal, "INFO_HTTP_CONNECTCODE", number, CURLINFO_HTTP_CONNECTCODE);
+	LUA_SET_TABLE(L, literal, "INFO_HTTPAUTH_AVAIL", number, CURLINFO_HTTPAUTH_AVAIL);
+	LUA_SET_TABLE(L, literal, "INFO_PROXYAUTH_AVAIL", number, CURLINFO_PROXYAUTH_AVAIL);
+	LUA_SET_TABLE(L, literal, "INFO_OS_ERRNO", number, CURLINFO_OS_ERRNO);
+	LUA_SET_TABLE(L, literal, "INFO_NUM_CONNECTS", number, CURLINFO_NUM_CONNECTS);
+	LUA_SET_TABLE(L, literal, "INFO_SSL_ENGINES", number, CURLINFO_SSL_ENGINES);
+	LUA_SET_TABLE(L, literal, "INFO_COOKIELIST", number, CURLINFO_COOKIELIST);
+#if CURL_NEWER(7,15,2)
+	LUA_SET_TABLE(L, literal, "INFO_LASTSOCKET", number, CURLINFO_LASTSOCKET);
+#endif
 }
 
 LUACURL_API int luaopen_luacurl (lua_State *L) 
@@ -877,6 +1083,8 @@ LUACURL_API int luaopen_luacurl (lua_State *L)
 	set_info(L);
 	setcurlerrors(L);
 	setcurloptions(L);
+	setcurlvalues(L);
+	setcurlinfo(L);
 	return 1;
 }
 

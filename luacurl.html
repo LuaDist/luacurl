@@ -1,162 +1,103 @@
-<html>
-<head>
-	<title>LuaCURL</title>
-	<style>
-		#headTitles
-		{
-			background-color: #FFFFFF;
-			font-weight: bold;
-			text-align: center;
-			margin-top: 20px;
-		}
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0028)http://luacurl.luaforge.net/ -->
+<HTML><HEAD><TITLE>LuaCURL</TITLE>
+<META http-equiv=Content-Type content="text/html; charset=iso-8859-1">
+<STYLE>#headTitles {
+	MARGIN-TOP: 20px; FONT-WEIGHT: bold; BACKGROUND-COLOR: #ffffff; TEXT-ALIGN: center
+}
+#module {
+	FONT-SIZE: 16px; COLOR: #000000; FONT-FAMILY: Arial; BACKGROUND-COLOR: #ffffff
+}
+#moduleName {
+	FONT-WEIGHT: bold; FONT-SIZE: 28px; TEXT-ALIGN: center
+}
+#moduleVersion {
+	FONT-SIZE: 16px; TEXT-ALIGN: center
+}
+#moduleSummary {
+	FONT-SIZE: 16px; TEXT-ALIGN: left
+}
+#moduleManual {
+	MARGIN-TOP: 20px
+}
+#example {
+	MARGIN-TOP: 14px; FONT-STYLE: italic
+}
+PRE.example {
+	BORDER-RIGHT: #aaaaaa 1px solid; PADDING-RIGHT: 15px; BORDER-TOP: #aaaaaa 1px solid; PADDING-LEFT: 15px; PADDING-BOTTOM: 15px; MARGIN-LEFT: 15px; BORDER-LEFT: #aaaaaa 1px solid; PADDING-TOP: 15px; BORDER-BOTTOM: #aaaaaa 1px solid; BACKGROUND-COLOR: #eeeeee
+}
+A {
+	FONT-WEIGHT: bold; COLOR: #666666; TEXT-DECORATION: none
+}
+</STYLE>
 
-		#module
-		{
-			color: #000000;
-			background-color: #FFFFFF;
-			font-size: 16px;
-			font-family: Arial;
-		}
-
-		#moduleName
-		{
-			text-align: center;
-			font-size: 28px;
-			font-weight: bold;
-		}
-
-		#moduleVersion
-		{
-			text-align: center;
-			font-size: 16px;
-		}
-
-		#moduleSummary
-		{
-			text-align: left;
-			font-size: 16px;
-		}
-		#moduleManual
-		{
-			margin-top: 20px;
-		}
-
-		#example
-		{
-			margin-top: 14px;
-			font-style: italic;
-		}
-
-		pre.example 
-		{
-			background-color: #EEEEEE;
-			border-top-width: 1px;
-			border-right-width: 1px;
-			border-bottom-width: 1px;
-			border-left-width: 1px;
-			border-top-style: solid;
-			border-right-style: solid;
-			border-bottom-style: solid;
-			border-left-style: solid;
-			border-top-color: #AAAAAA;
-			border-right-color: #AAAAAA;
-			border-bottom-color: #AAAAAA;
-			border-left-color: #AAAAAA;
-			padding: 15px;
-			margin-left: 15px;
-		}
-
-		a { color: #666666; font-weight: bold; text-decoration: none; }
-	</style>
-</head>
-<body>
-<div id="module">
-	<div id="moduleName">LuaCURL</div>
-<a name="#summary"></a>
-<div id="headTitles">Version</div>
-<div id="moduleVersion">1.0</div>
-<div id="headTitles">Summary</div>
-<div id="moduleSummary">Lua module binding CURL 7.14.0</div>
-<a name="#manual"></a>
-<div id="headTitles">Manual</div>
-<div id="moduleManual">
-LuaCURL is Lua 5.x compatible module providing Internet browsing capabilities based on the <a href="http://curl.haxx.se">CURL</a> library.
-The module interface follows strictly the CURl architecture and is very easy to use if the programmer has already experience with CURL.
-The only LuaCURL <code>luaopen_luacurl</code> public function register itself to the Lua context defining a namespace curl with one constructor 
-and some utility functions.
-
-	<h4>Registration</h4> 
-There are different ways to register LuaCURL to Lua as dynamically loaded module.
-But in all cases your Lua program have to be configured to support dynamic modules. 
-If you are compiling Lua from source then make sure that <code>LOADLIB</code> directive is set in the lua/config file.
-If you are using Lua 5.0 with compat-5.1 or your Lua version is Lua 5.1 then you can use
-<pre class="example">
-require("luacurl")
-</pre>
-otherwise you can use the function <code>loadlib</code>
-<pre class="example">
-curl=assert(loadlib("[lib]luacurl[.so|.dll]", "luaopen_luacurl"))()
-</pre>
-
-After the luaCURL is successfully registered to the Lua context you are ready to construct curl objects and call curl functions
-<h4>Functions</h4>
-<h4><code>curl.escape(string)</code></h4>
-Escapes URL strings
-<div id="example">Example:</div>
-<pre class="example">
-print(curl.escape("abcd$%^&*()"))
+<META content="MSHTML 6.00.2900.2722" name=GENERATOR></HEAD>
+<BODY>
+<DIV id=module>
+<DIV id=moduleName>LuaCURL</DIV><A name=#summary></A>
+<DIV id=headTitles>Version</DIV>
+<DIV id=moduleVersion>1.1</DIV>
+<DIV id=headTitles>Summary</DIV>
+<DIV id=moduleSummary>Lua module binding CURL versions until 7.15.2</DIV>
+<DIV id=headTitles>Download</DIV>LuaCURL source can be downloaded from <A 
+href="http://luaforge.net/projects/luacurl/">Lua Forge</A> page. <A 
+name=#manual></A>
+<DIV id=headTitles>Manual</DIV>
+<DIV id=moduleManual>LuaCURL is Lua 5.x compatible module providing Internet 
+browsing capabilities based on the <A href="http://curl.haxx.se/">CURL</A> 
+library. The module interface follows strictly the CURl architecture and is very 
+easy to use if the programmer has already experience with CURL. The only LuaCURL 
+<CODE>luaopen_luacurl</CODE> public function register itself to the Lua context 
+defining a namespace curl with one constructor and some utility functions. 
+<H4>Registration</H4>There are different ways to register LuaCURL to Lua as 
+dynamically loaded module. But in all cases your Lua program have to be 
+configured to support dynamic modules. If you are compiling Lua from source then 
+make sure that <CODE>LOADLIB</CODE> directive is set in the lua/config file. If 
+you are using Lua 5.0 with compat-5.1 or your Lua version is Lua 5.1 then you 
+can use <PRE class=example>require("luacurl")
+</PRE>otherwise you can use the function <CODE>loadlib</CODE> <PRE class=example>curl=assert(loadlib("[lib]luacurl[.so|.dll]", "luaopen_luacurl"))()
+</PRE>After the luaCURL is successfully registered to the Lua context you are 
+ready to construct curl objects and call curl functions 
+<H4>Functions</H4>
+<H4><CODE>curl.escape(string)</CODE></H4>Escapes URL strings 
+<DIV id=example>Example:</DIV><PRE class=example>print(curl.escape("abcd$%^&amp;*()"))
 abcd%24%25%5E%26%2A%28%29
-</pre>
-<h4><code>curl.unescape(string)</code></h4>
-Unescapes URL encoding in strings
-<div id="example">Example:</div>
-<pre class="example">
-print(curl.unescape("abcd%24%25%5E%26%2A%28%29"));
-abcd$%^&*()
-</pre>
-
-<h4>Constructor</h4>
-<h4><code id="function">curl.new()</code></h4>
-
-Use this function to instantiate curl objects.
-
-<div id="example">Example:</div>
-<pre class="example">
-c = curl.new()
-</pre>
-<h4>Methods</h4>
-<h4><code>c:setopt(option, value)</code></h4>
-Set option value to a curl object <code>c</code>. 
-The first parameter <code>option</code> is a number representing the option which can be on of the following listed below.
-A predefined constant <code>curl.OPT_XXXX</code> corresponds to <code>CURLOPT_XXXX</code> constant defined in the libcurl interface curl/curl.h
-The accepted value type depends of the corresponding option.
-Below are listed all curl options supported by libCURL grouped by value type.
-For a complete documentation on the options below read the curl manual.
-
-<h5><strong>Callback options</strong></h5>
-
-
-<pre class="example">
-curl.OPT_READFUNCTION, function(userparam, size) -> string
+</PRE>
+<H4><CODE>curl.unescape(string)</CODE></H4>Unescapes URL encoding in strings 
+<DIV id=example>Example:</DIV><PRE class=example>print(curl.unescape("abcd%24%25%5E%26%2A%28%29"));
+abcd$%^&amp;*()
+</PRE>
+<H4>Constructor</H4>
+<H4><CODE id=function>curl.new()</CODE></H4>Use this function to instantiate 
+curl objects. 
+<DIV id=example>Example:</DIV><PRE class=example>c = curl.new()
+</PRE>
+<H4>Methods</H4>
+<H4><CODE>c:setopt(option, value)</CODE></H4>Set option value to a curl object 
+<CODE>c</CODE>. The first parameter <CODE>option</CODE> is a number representing 
+the option which can be on of the following listed below. A predefined constant 
+<CODE>curl.OPT_XXXX</CODE> corresponds to <CODE>CURLOPT_XXXX</CODE> constant 
+defined in the libcurl interface curl/curl.h The accepted value type depends of 
+the corresponding option. Below are listed all curl options supported by libCURL 
+grouped by value type. For a complete documentation on the options below read 
+the curl manual. 
+<H5><STRONG>Callback options</STRONG></H5><PRE class=example>
+curl.OPT_READFUNCTION, function(userparam, size) -&gt; string
 curl.OPT_READDATA, userparam
 
-curl.OPT_WRITEFUNCTION, function(userparam, buffer) -> number
+curl.OPT_WRITEFUNCTION, function(userparam, buffer) -&gt; number
 curl.OPT_WRITEDATA, userparam
 
-curl.OPT_HEADERFUNCTION, function(userparam, buffer) -> number
+curl.OPT_HEADERFUNCTION, function(userparam, buffer) -&gt; number
 curl.OPT_HEADERDATA, userparam
 
-curl.OPT_PROGRESSFUNCTION, function(userparam, dltotal, dlnow, uptotal, upnow) -> number
+curl.OPT_PROGRESSFUNCTION, function(userparam, dltotal, dlnow, uptotal, upnow) -&gt; number
 curl.OPT_PROGRESSDATA, userparam
 
-curl.OPT_IOCTLFUNCTION, function(userparam, command) -> number
+curl.OPT_IOCTLFUNCTION, function(userparam, command) -&gt; number
 curl.OPT_IOCTLDATA, userparam
-</pre>
-
-<h5><strong>String list options</strong></h5>
-
-<pre class="example">
-curl.OPT_SOURCE_QUOTE, string, ..., string
+</PRE>
+<H5><STRONG>String list options</STRONG></H5><PRE class=example>curl.OPT_SOURCE_QUOTE, string, ..., string
 curl.OPT_QUOTE, string, ..., string
 curl.OPT_POSTQUOTE, string, ..., string
 curl.OPT_TELNETOPTIONS, string, ..., string
@@ -166,12 +107,8 @@ curl.OPT_SOURCE_PREQUOTE, string, ..., string
 curl.OPT_SOURCE_POSTQUOTE, string, ..., string
 curl.OPT_HTTPHEADER, string, ..., string
 curl.OPT_HTTPPOST, string, ..., string
-</pre>
-
-<h5><strong>String options</strong></h5>
-
-<pre class="example">
-curl.OPT_FTP_ACCOUNT, string
+</PRE>
+<H5><STRONG>String options</STRONG></H5><PRE class=example>curl.OPT_FTP_ACCOUNT, string
 curl.OPT_URL, string
 curl.OPT_PROXY, string
 curl.OPT_USERPWD, string
@@ -203,12 +140,8 @@ curl.OPT_ENCODING, string
 curl.OPT_NETRC_FILE, string
 curl.OPT_SOURCE_USERPWD, string
 curl.OPT_SOURCE_URL, string
-</pre>
-
-<h5><strong>Number options</strong></h5>
-
-<pre class="example">
-curl.OPT_MAXREDIRS, number
+</PRE>
+<H5><STRONG>Number options</STRONG></H5><PRE class=example>curl.OPT_MAXREDIRS, number
 curl.OPT_MAXCONNECTS, number
 curl.OPT_CLOSEPOLICY, number
 curl.OPT_CONNECTTIMEOUT, number
@@ -240,12 +173,8 @@ curl.OPT_TIMEVALUE, number
 curl.OPT_NETRC, number
 curl.OPT_PROXYPORT, number
 curl.OPT_POSTFIELDSIZE, number
-</pre>
-
-<h5><strong>Boolean options</strong></h5>
-
-<pre class="example">
-curl.OPT_CRLF, boolean
+</PRE>
+<H5><STRONG>Boolean options</STRONG></H5><PRE class=example>curl.OPT_CRLF, boolean
 curl.OPT_VERBOSE, boolean
 curl.OPT_HEADER, boolean
 curl.OPT_NOPROGRESS, boolean
@@ -274,32 +203,41 @@ curl.OPT_FRESH_CONNECT, boolean
 curl.OPT_FORBID_REUSE, boolean
 curl.OPT_FTP_USE_EPSV, boolean
 curl.OPT_HTTPGET, boolean
-</pre>
-<h4><code>c:perform()</code></h4>
-Call this method to perform a file transfer after all <code>setopt</code> calls are made.
-<pre class="example">
-c:perform()
-</pre>
-<h4><code>c:close()</code></h4>
-This function closes a curl connection created by <code>curl.net</code>
-<pre class="example">
-c:close()
-</pre>
+</PRE>
+<H4><CODE>c:perform()</CODE></H4>Call this method to perform a file transfer 
+after all <CODE>setopt</CODE> calls are made. <PRE class=example>c:perform()
+</PRE>
+<H4><CODE>c:close()</CODE></H4>This function closes a curl connection created by 
+<CODE>curl.net</CODE> <PRE class=example>c:close()
+</PRE>
+<H4><STRONG>Constants</STRONG></H4>All enumeration types and define macros from 
+libCURL 7.15.2 are exported in curl namespace with the following names 
+substitutions <PRE class=example>	CURL_XXXX -&gt; curl.XXXX
+</PRE>or <PRE class=example>	CURLXXXX -&gt; curl.XXXX</PRE>
+<H4><STRONG>Test Program</STRONG></H4>
+The test downloads http://www.lua.org/ftp/lua-5.0.2.tar.gz using couple of cURL options.
+<PRE class=example>	
+require("luacurl");
+c=assert(curl.new());
+local file=assert(io.open("lua-5.0.2.tar.gz", "wb"));
+assert(c:setopt(curl.OPT_WRITEFUNCTION, function (stream, buffer)
+	stream:write(buffer)
+	return string.len(buffer);
+end));
+assert(c:setopt(curl.OPT_WRITEDATA, file));
+assert(c:setopt(curl.OPT_PROGRESSFUNCTION, function (_, dltotal, dlnow, uptotal, upnow)
+	print(dltotal, dlnow, uptotal, upnow);
+end));
+assert(c:setopt(curl.OPT_NOPROGRESS, false));
+assert(c:setopt(curl.OPT_BUFFERSIZE, 5000));
+assert(c:setopt(curl.OPT_HTTPHEADER, "Connection: Keep-Alive", "Accept-Language: en-us"));
+assert(c:setopt(curl.OPT_URL, "http://www.lua.org/ftp/lua-5.0.2.tar.gz"));
+assert(c:setopt(curl.OPT_CONNECTTIMEOUT, 15));
+assert(c:perform());
+assert(c:close()); -- not necessary, as will be garbage collected soon
+s="abcd$%^&*()";
+assert(s == assert(curl.unescape(curl.escape(s))));
+file:close();
+</PRE>
 
-<h4><strong>Constants</strong></h4>
-All enumeration types and define macros from libCURL 7.14.0 are exported in curl namespace with the following names substitutions
-<pre class="example">
-	CURL_XXXX -> curl.XXXX
-</pre>
-or
-<pre class="example">
-	CURLXXXX -> curl.XXXX
-</pre>
-
-
-</div> <!-- moduleManual -->
-
-</div> <!-- module -->
-
-</body>
-</html>
+</DIV><!-- moduleManual --></DIV><!-- module --></BODY></HTML>
