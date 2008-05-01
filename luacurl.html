@@ -36,9 +36,9 @@ A {
 <DIV id=module>
 <DIV id=moduleName>LuaCURL</DIV><A name=#summary></A>
 <DIV id=headTitles>Version</DIV>
-<DIV id=moduleVersion>1.1</DIV>
+<DIV id=moduleVersion>1.2</DIV>
 <DIV id=headTitles>Summary</DIV>
-<DIV id=moduleSummary>Lua module binding CURL versions until 7.15.2</DIV>
+<DIV id=moduleSummary>Lua module binding CURL versions until 7.16.4</DIV>
 <DIV id=headTitles>Download</DIV>LuaCURL source can be downloaded from <A 
 href="http://luaforge.net/projects/luacurl/">Lua Forge</A> page. <A 
 name=#manual></A>
@@ -97,14 +97,12 @@ curl.OPT_PROGRESSDATA, userparam
 curl.OPT_IOCTLFUNCTION, function(userparam, command) -&gt; number
 curl.OPT_IOCTLDATA, userparam
 </PRE>
-<H5><STRONG>String list options</STRONG></H5><PRE class=example>curl.OPT_SOURCE_QUOTE, string, ..., string
+<H5><STRONG>String list options</STRONG></H5><PRE class=example>
 curl.OPT_QUOTE, string, ..., string
 curl.OPT_POSTQUOTE, string, ..., string
 curl.OPT_TELNETOPTIONS, string, ..., string
 curl.OPT_PREQUOTE, string, ..., string
 curl.OPT_HTTP200ALIASES, string, ..., string
-curl.OPT_SOURCE_PREQUOTE, string, ..., string
-curl.OPT_SOURCE_POSTQUOTE, string, ..., string
 curl.OPT_HTTPHEADER, string, ..., string
 curl.OPT_HTTPPOST, string, ..., string
 </PRE>
@@ -138,8 +136,6 @@ curl.OPT_SSLENGINE, string
 curl.OPT_CAPATH, string
 curl.OPT_ENCODING, string
 curl.OPT_NETRC_FILE, string
-curl.OPT_SOURCE_USERPWD, string
-curl.OPT_SOURCE_URL, string
 </PRE>
 <H5><STRONG>Number options</STRONG></H5><PRE class=example>curl.OPT_MAXREDIRS, number
 curl.OPT_MAXCONNECTS, number
@@ -211,15 +207,15 @@ after all <CODE>setopt</CODE> calls are made. <PRE class=example>c:perform()
 <CODE>curl.net</CODE> <PRE class=example>c:close()
 </PRE>
 <H4><STRONG>Constants</STRONG></H4>All enumeration types and define macros from 
-libCURL 7.15.2 are exported in curl namespace with the following names 
+libCURL 7.16.4 are exported in curl namespace with the following names 
 substitutions <PRE class=example>	CURL_XXXX -&gt; curl.XXXX
 </PRE>or <PRE class=example>	CURLXXXX -&gt; curl.XXXX</PRE>
 <H4><STRONG>Test Program</STRONG></H4>
-The test downloads http://www.lua.org/ftp/lua-5.0.2.tar.gz using couple of cURL options.
+The test downloads http://www.lua.org/ftp/lua-5.1.2.tar.gz using couple of cURL options.
 <PRE class=example>	
 require("luacurl");
 c=assert(curl.new());
-local file=assert(io.open("lua-5.0.2.tar.gz", "wb"));
+local file=assert(io.open("lua-5.1.2.tar.gz", "wb"));
 assert(c:setopt(curl.OPT_WRITEFUNCTION, function (stream, buffer)
 	stream:write(buffer)
 	return string.len(buffer);
@@ -231,7 +227,7 @@ end));
 assert(c:setopt(curl.OPT_NOPROGRESS, false));
 assert(c:setopt(curl.OPT_BUFFERSIZE, 5000));
 assert(c:setopt(curl.OPT_HTTPHEADER, "Connection: Keep-Alive", "Accept-Language: en-us"));
-assert(c:setopt(curl.OPT_URL, "http://www.lua.org/ftp/lua-5.0.2.tar.gz"));
+assert(c:setopt(curl.OPT_URL, "http://www.lua.org/ftp/lua-5.1.2.tar.gz"));
 assert(c:setopt(curl.OPT_CONNECTTIMEOUT, 15));
 assert(c:perform());
 assert(c:close()); -- not necessary, as will be garbage collected soon

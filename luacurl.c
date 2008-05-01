@@ -1,6 +1,6 @@
 /* luacurl.c
- * 
- * author      : Alexander Marinov (alek@crazyland.com)
+ *
+ * author      : Alexander Marinov (alekmarinov@gmail.com)
  * project     : luacurl
  * description : Binds libCURL to Lua
  * copyright   : The same as Lua license (http://www.lua.org/license.html) and 
@@ -8,6 +8,7 @@
  * todo        : multipart formpost building,
  *               curl multi
  *
+ * Contributors: Thomas Harning added support for tables/threads as the CURLOPT_*DATA items.
  *******************************************************************************************/
 
 #include <string.h>
@@ -169,7 +170,7 @@ extern "C" {
 	C_OPT_SL(SOURCE_QUOTE) \
 	C_OPT(FTP_ACCOUNT, string)
 
-#if CURL_OLDER(7,12,1)
+#if CURL_OLDER(7,12,1) || CURL_NEWER(7,16,4)
   #define CURLOPT_SOURCE_PREQUOTE      -MAKE_VERSION_NUM(1,12,7)+0
   #define CURLOPT_SOURCE_POSTQUOTE     -MAKE_VERSION_NUM(1,12,7)+1
   #define CURLOPT_SOURCE_USERPWD       -MAKE_VERSION_NUM(1,12,7)+2
@@ -189,11 +190,14 @@ extern "C" {
 #endif
 
 #if CURL_OLDER(7,13,0)
-  #define CURLOPT_SOURCE_URL           -MAKE_VERSION_NUM(0,13,7)+0
-  #define CURLOPT_SOURCE_QUOTE         -MAKE_VERSION_NUM(0,13,7)+1
   #define CURLOPT_FTP_ACCOUNT          -MAKE_VERSION_NUM(0,13,7)+2
   #define CURLE_INTERFACE_FAILED       -MAKE_VERSION_NUM(0,13,7)+3
   #define CURLE_SEND_FAIL_REWIND       -MAKE_VERSION_NUM(0,13,7)+4
+#endif
+
+#if CURL_OLDER(7,13,0) || CURL_NEWER(7,16,4)
+  #define CURLOPT_SOURCE_URL           -MAKE_VERSION_NUM(0,13,7)+0
+  #define CURLOPT_SOURCE_QUOTE         -MAKE_VERSION_NUM(0,13,7)+1
 #endif
 
 #if CURL_OLDER(7,13,1)
@@ -227,7 +231,7 @@ union luaValueT
 	curl_ioctl_callback icb;
 #endif
 
-	int nval;
+	long nval;
 	char* sval;
 	void* ptr;
 };
@@ -251,7 +255,9 @@ static void pushLuaValueT(lua_State* L, int t, union luaValueT v)
 	{
 		case LUA_TNIL: lua_pushnil(L); break;
 		case LUA_TBOOLEAN: lua_pushboolean(L, v.nval); break;
+		case LUA_TTABLE:
 		case LUA_TFUNCTION: 
+		case LUA_TTHREAD:
 		case LUA_TUSERDATA: lua_rawgeti(L, LUA_REGISTRYINDEX, v.nval); break;
 		case LUA_TLIGHTUSERDATA: lua_pushlightuserdata(L, v.ptr); break;
 		case LUA_TNUMBER: lua_pushnumber(L, v.nval); break;
@@ -390,7 +396,7 @@ static int lcurl_easy_getinfo(lua_State* L)
 	{
 		/* string list */
 		struct curl_slist *slist=0;
-		if (CURLE_OK == (code=curl_easy_getinfo(c, nInfo, &slist)))
+		if (CURLE_OK == (code=curl_easy_getinfo(c->curl, nInfo, &slist)))
 		{
 			if (slist)
 			{
@@ -417,7 +423,7 @@ static int lcurl_easy_getinfo(lua_State* L)
 	{
 		/* double */
 		double value;
-		if (CURLE_OK == (code=curl_easy_getinfo(c, nInfo, &value)))
+		if (CURLE_OK == (code=curl_easy_getinfo(c->curl, nInfo, &value)))
 		{
 			lua_pushnumber(L, value);
 			return 1;
@@ -430,7 +436,7 @@ static int lcurl_easy_getinfo(lua_State* L)
 	{
 		/* long */
 		long value;
-		if (CURLE_OK == (code=curl_easy_getinfo(c, nInfo, &value)))
+		if (CURLE_OK == (code=curl_easy_getinfo(c->curl, nInfo, &value)))
 		{
 			lua_pushinteger(L, (lua_Integer)value);
 			return 1;
@@ -443,7 +449,7 @@ static int lcurl_easy_getinfo(lua_State* L)
 	{
 		/* string */
 		char* value;
-		if (CURLE_OK == (code=curl_easy_getinfo(c, nInfo, &value)))
+		if (CURLE_OK == (code=curl_easy_getinfo(c->curl, nInfo, &value)))
 		{
 			lua_pushstring(L, value);
 			return 1;
@@ -574,6 +580,7 @@ static int lcurl_easy_setopt(lua_State* L)
 			{
 				case LUA_TTABLE:
 				case LUA_TUSERDATA:
+				case LUA_TTHREAD:
 				case LUA_TFUNCTION:
 				{
 					int ref;
@@ -676,28 +683,28 @@ ALL_CURL_OPT
 	switch (curlOpt)
 	{
 		case CURLOPT_READDATA:
-			if (c->rudtype == LUA_TFUNCTION || c->rudtype == LUA_TUSERDATA)
+			if (c->rudtype == LUA_TFUNCTION || c->rudtype == LUA_TUSERDATA || c->rudtype == LUA_TTABLE || c->rudtype == LUA_TTHREAD)
 				luaL_unref(L, LUA_REGISTRYINDEX, c->rud.nval); /* unref previously referenced read data */
 			c->rudtype=lua_type(L, 3);                         /* set the read data type */
 			c->rud=v;                                          /* set the read data value (it can be reference) */
 			v.ptr=c;                                           /* set the real read data to curl as our self object */
 			break;
 		case CURLOPT_WRITEDATA:
-			if (c->wudtype == LUA_TFUNCTION || c->wudtype == LUA_TUSERDATA)
+			if (c->wudtype == LUA_TFUNCTION || c->wudtype == LUA_TUSERDATA || c->wudtype == LUA_TTABLE || c->wudtype == LUA_TTHREAD)
 				luaL_unref(L, LUA_REGISTRYINDEX, c->wud.nval);
 			c->wudtype=lua_type(L, 3);
 			c->wud=v;
 			v.ptr=c;
 			break;
 		case CURLOPT_PROGRESSDATA:
-			if (c->pudtype == LUA_TFUNCTION || c->pudtype == LUA_TUSERDATA)
+			if (c->pudtype == LUA_TFUNCTION || c->pudtype == LUA_TUSERDATA || c->pudtype == LUA_TTABLE || c->pudtype == LUA_TTHREAD)
 				luaL_unref(L, LUA_REGISTRYINDEX, c->pud.nval);
 			c->pudtype=lua_type(L, 3);
 			c->pud=v;
 			v.ptr=c;
 			break;
 		case CURLOPT_HEADERDATA:
-			if (c->hudtype == LUA_TFUNCTION || c->hudtype == LUA_TUSERDATA)
+			if (c->hudtype == LUA_TFUNCTION || c->hudtype == LUA_TUSERDATA || c->hudtype == LUA_TTABLE || c->hudtype == LUA_TTHREAD)
 				luaL_unref(L, LUA_REGISTRYINDEX, c->hud.nval);
 			c->hudtype=lua_type(L, 3);
 			c->hud=v;
@@ -705,7 +712,7 @@ ALL_CURL_OPT
 			break;
 #if CURL_NEWER(7,12,3)
 		case CURLOPT_IOCTLDATA:
-			if (c->iudtype == LUA_TFUNCTION || c->iudtype == LUA_TUSERDATA)
+			if (c->iudtype == LUA_TFUNCTION || c->iudtype == LUA_TUSERDATA || c->iudtype == LUA_TTABLE || c->iudtype == LUA_TTHREAD)
 				luaL_unref(L, LUA_REGISTRYINDEX, c->iud.nval);
 			c->iudtype=lua_type(L, 3);
 			c->iud=v;
@@ -766,15 +773,15 @@ static int lcurl_easy_close(lua_State* L)
 	luaL_unref(L, LUA_REGISTRYINDEX, c->fprogressRef);
 	luaL_unref(L, LUA_REGISTRYINDEX, c->fheaderRef);
 	luaL_unref(L, LUA_REGISTRYINDEX, c->fioctlRef);
-	if (c->rudtype == LUA_TFUNCTION || c->rudtype == LUA_TUSERDATA)
+	if (c->rudtype == LUA_TFUNCTION || c->rudtype == LUA_TUSERDATA || c->rudtype == LUA_TTABLE || c->rudtype == LUA_TTHREAD)
 		luaL_unref(L, LUA_REGISTRYINDEX, c->rud.nval);
-	if (c->wudtype == LUA_TFUNCTION || c->wudtype == LUA_TUSERDATA)
+	if (c->wudtype == LUA_TFUNCTION || c->wudtype == LUA_TUSERDATA || c->wudtype == LUA_TTABLE || c->wudtype == LUA_TTHREAD)
 		luaL_unref(L, LUA_REGISTRYINDEX, c->wud.nval);
-	if (c->pudtype == LUA_TFUNCTION || c->pudtype == LUA_TUSERDATA)
+	if (c->pudtype == LUA_TFUNCTION || c->pudtype == LUA_TUSERDATA || c->pudtype == LUA_TTABLE || c->pudtype == LUA_TTHREAD)
 		luaL_unref(L, LUA_REGISTRYINDEX, c->pud.nval);
-	if (c->hudtype == LUA_TFUNCTION || c->hudtype == LUA_TUSERDATA)
+	if (c->hudtype == LUA_TFUNCTION || c->hudtype == LUA_TUSERDATA || c->hudtype == LUA_TTABLE || c->hudtype == LUA_TTHREAD)
 		luaL_unref(L, LUA_REGISTRYINDEX, c->hud.nval);
-	if (c->iudtype == LUA_TFUNCTION || c->iudtype == LUA_TUSERDATA)
+	if (c->iudtype == LUA_TFUNCTION || c->iudtype == LUA_TUSERDATA || c->iudtype == LUA_TTABLE || c->iudtype == LUA_TTHREAD)
 		luaL_unref(L, LUA_REGISTRYINDEX, c->iud.nval);
 
 #undef C_OPT
