@@ -170,7 +170,7 @@ extern "C" {
 	C_OPT_SL(SOURCE_QUOTE) \
 	C_OPT(FTP_ACCOUNT, string)
 
-#if CURL_OLDER(7,12,1) || CURL_NEWER(7,16,4)
+#if CURL_OLDER(7,12,1) || CURL_NEWER(7,16,2)
   #define CURLOPT_SOURCE_PREQUOTE      -MAKE_VERSION_NUM(1,12,7)+0
   #define CURLOPT_SOURCE_POSTQUOTE     -MAKE_VERSION_NUM(1,12,7)+1
   #define CURLOPT_SOURCE_USERPWD       -MAKE_VERSION_NUM(1,12,7)+2
@@ -195,7 +195,7 @@ extern "C" {
   #define CURLE_SEND_FAIL_REWIND       -MAKE_VERSION_NUM(0,13,7)+4
 #endif
 
-#if CURL_OLDER(7,13,0) || CURL_NEWER(7,16,4)
+#if CURL_OLDER(7,13,0) || CURL_NEWER(7,16,2)
   #define CURLOPT_SOURCE_URL           -MAKE_VERSION_NUM(0,13,7)+0
   #define CURLOPT_SOURCE_QUOTE         -MAKE_VERSION_NUM(0,13,7)+1
 #endif
@@ -278,7 +278,7 @@ static size_t readerCallback( void *ptr, size_t size, size_t nmemb, void *stream
 	readBytes=lua_tostring(c->L, -1);
 	if (readBytes)
 	{
-		strncpy(ptr, readBytes, lua_strlen(c->L, -1));
+		memcpy(ptr, readBytes, lua_strlen(c->L, -1));
 		return lua_strlen(c->L, -1);
 	}
 	return 0;
