@@ -1,0 +1,15 @@
+--- This file is part of LuaDist project
+
+name = "luacurl"
+version = "1.2.1"
+
+desc = "LuaCURL is Lua 5.x compatible module providing Internet browsing capabilities based on the cURL library."
+author = "Alexander Marinov, Enrico Tassi"
+license = "MIT/X11"
+url = "http://luaforge.net/projects/luacurl/"
+maintainer = "Peter Drahoš"
+
+depends = {
+	"lua ~> 5.1",
+	"curl >= 7.18"
+}

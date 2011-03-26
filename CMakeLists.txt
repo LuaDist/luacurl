@@ -1,43 +1,18 @@
-# src/CMakeLists.txt
+# Copyright (C) 2007-2009 LuaDist.
+# Created by Peter Drahoš
+# Redistribution and use of this file is allowed according to the terms of the MIT license.
+# For details see the COPYRIGHT file distributed with LuaDist.
+# Please note that the package source code is licensed under its own license.
 
-FIND_LIBRARY(LIB_LUA lua PATHS
-	/usr/local/lib
-	/usr/lib
-)
+PROJECT (luacurl C)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+INCLUDE(dist.cmake)
 
-IF(NOT LIB_LUA)
-	FIND_LIBRARY(LIB_LUA lua5.1 PATHS
-		/usr/local/lib
-		/usr/lib
-	)
-ENDIF(NOT LIB_LUA)
+# Find curl
+FIND_PACKAGE(CURL REQUIRED)
+INCLUDE_DIRECTORIES(${CURL_INCLUDE_DIR})
 
-FIND_PATH( CURL_INCLUDE_DIR curl/curl.h
-  /usr/include
-  /usr/local/include
-)
+ADD_LUA_MODULE(luacurl luacurl.c luacurl.def)
+TARGET_LINK_LIBRARIES(luacurl ${CURL_LIBRARY})
 
-FIND_LIBRARY( LIB_CURL curl
-  /usr/lib
-  /usr/local/lib
-)
-
-INCLUDE_DIRECTORIES(
-	${${PROJECT_NAME}_SOURCE_DIR}/src
-	${CURL_INCLUDE_DIR}
-	/usr/local/include/lua5.1
-	/usr/include/lua5.1
-)
-
-SET(${PROJECT_NAME}_LIBRARIES
-	${LIB_LUA}
-	${LIB_CURL}
-)
-
-SET(${PROJECT_NAME}_SOURCES
-	luacurl.c
-)
-
-LINK_LIBRARIES(${${PROJECT_NAME}_LIBRARIES} m)
-ADD_LIBRARY(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCES})
-INSTALL_TARGETS(/lib ${PROJECT_NAME})
+INSTALL (TARGETS luacurl DESTINATION ${INSTALL_CMOD})
