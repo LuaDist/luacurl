@@ -4,15 +4,13 @@
 # For details see the COPYRIGHT file distributed with LuaDist.
 # Please note that the package source code is licensed under its own license.
 
-PROJECT (luacurl C)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-INCLUDE(dist.cmake)
+project (luacurl C)
+cmake_minimum_required ( VERSION 2.6 )
+include ( dist.cmake )
 
 # Find curl
-FIND_PACKAGE(CURL REQUIRED)
-INCLUDE_DIRECTORIES(${CURL_INCLUDE_DIR})
+find_package ( CURL REQUIRED )
+include_directories ( ${CURL_INCLUDE_DIR} )
 
-ADD_LUA_MODULE(luacurl luacurl.c luacurl.def)
-TARGET_LINK_LIBRARIES(luacurl ${CURL_LIBRARY})
-
-INSTALL (TARGETS luacurl DESTINATION ${INSTALL_CMOD})
+install_lua_module ( luacurl luacurl.c luacurl.def )
+target_link_libraries ( luacurl ${CURL_LIBRARY} )
