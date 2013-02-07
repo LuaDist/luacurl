@@ -1,0 +1,21 @@
+type = "x86_64"
+arch = "Darwin"
+author = "Alexander Marinov, Enrico Tassi"
+depends = {
+[[lua ~> 5.1]],
+[[curl >= 7.18]],
+}
+
+desc = "LuaCURL is Lua 5.x compatible module providing Internet browsing capabilities based on the cURL library."
+version = "1.2.1"
+maintainer = "Peter Drahoš"
+files = {
+Runtime = {
+[[lib/lua/luacurl.so]],
+}
+,
+}
+
+license = "MIT/X11"
+name = "luacurl"
+url = "http://luaforge.net/projects/luacurl/"
